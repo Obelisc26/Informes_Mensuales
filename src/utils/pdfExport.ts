@@ -14,7 +14,7 @@ export const exportToPDF = async (
   const {
     filename = `SOC-Report-${new Date().toISOString().split('T')[0]}.pdf`,
     quality = 1,
-    scale = 2
+    scale = 1.5
   } = options;
 
   try {
@@ -23,12 +23,14 @@ export const exportToPDF = async (
       throw new Error(`Element with id "${elementId}" not found`);
     }
 
-    // Temporarily modify styles for better PDF rendering
-    const originalStyles = element.style.cssText;
-    element.style.backgroundColor = 'white';
-    element.style.color = 'black';
+    // Add print class for better PDF styling
+    const originalClasses = element.className;
+    element.classList.add('print-mode');
+    
+    // Wait for potential layout changes
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Create canvas from element
+    // Create canvas from element with better settings
     const canvas = await html2canvas(element, {
       scale,
       useCORS: true,
@@ -36,46 +38,88 @@ export const exportToPDF = async (
       backgroundColor: '#ffffff',
       logging: false,
       height: element.scrollHeight,
-      width: element.scrollWidth
+      width: element.scrollWidth,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: 1200,
+      windowHeight: element.scrollHeight
     });
 
-    // Restore original styles
-    element.style.cssText = originalStyles;
+    // Restore original classes
+    element.className = originalClasses;
 
-    // Calculate dimensions
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 295; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
+    // PDF dimensions with margins (A4: 210x297mm)
+    const pdfWidth = 210;
+    const pdfHeight = 297;
+    const margin = 15; // 15mm margins
+    const contentWidth = pdfWidth - (margin * 2);
+    const contentHeight = pdfHeight - (margin * 2);
+    
+    // Calculate image dimensions to fit content area
+    const imgRatio = canvas.width / canvas.height;
+    const contentRatio = contentWidth / contentHeight;
+    
+    let imgWidth, imgHeight;
+    if (imgRatio > contentRatio) {
+      // Image is wider, fit to width
+      imgWidth = contentWidth;
+      imgHeight = contentWidth / imgRatio;
+    } else {
+      // Image is taller, fit to height
+      imgHeight = contentHeight;
+      imgWidth = contentHeight * imgRatio;
+    }
+
+    // Center the image on the page
+    const xOffset = margin + (contentWidth - imgWidth) / 2;
+    const yOffset = margin;
 
     // Create PDF
     const pdf = new jsPDF('p', 'mm', 'a4');
-    let position = 0;
-
-    // Add first page
-    pdf.addImage(
-      canvas.toDataURL('image/jpeg', quality),
-      'JPEG',
-      0,
-      position,
-      imgWidth,
-      imgHeight
-    );
-    heightLeft -= pageHeight;
-
-    // Add additional pages if needed
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(
-        canvas.toDataURL('image/jpeg', quality),
-        'JPEG',
-        0,
-        position,
-        imgWidth,
-        imgHeight
+    
+    // Calculate how many pages we need
+    const pageContentHeight = contentHeight;
+    const totalImageHeight = imgHeight;
+    const pagesNeeded = Math.ceil(totalImageHeight / pageContentHeight);
+    
+    for (let page = 0; page < pagesNeeded; page++) {
+      if (page > 0) {
+        pdf.addPage();
+      }
+      
+      // Calculate source rectangle for this page
+      const srcY = (page * pageContentHeight * canvas.height) / totalImageHeight;
+      const srcHeight = Math.min(
+        (pageContentHeight * canvas.height) / totalImageHeight,
+        canvas.height - srcY
       );
-      heightLeft -= pageHeight;
+      
+      // Create a temporary canvas for this page's content
+      const pageCanvas = document.createElement('canvas');
+      const pageCtx = pageCanvas.getContext('2d');
+      
+      if (pageCtx && srcHeight > 0) {
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = srcHeight;
+        
+        // Draw the portion of the original canvas for this page
+        pageCtx.drawImage(
+          canvas,
+          0, srcY, canvas.width, srcHeight,
+          0, 0, canvas.width, srcHeight
+        );
+        
+        // Add to PDF
+        const pageImgHeight = (srcHeight * imgWidth) / canvas.width;
+        pdf.addImage(
+          pageCanvas.toDataURL('image/jpeg', quality),
+          'JPEG',
+          xOffset,
+          yOffset,
+          imgWidth,
+          pageImgHeight
+        );
+      }
     }
 
     // Save the PDF

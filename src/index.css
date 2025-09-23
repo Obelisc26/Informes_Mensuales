@@ -171,3 +171,52 @@ All colors MUST be HSL.
     page-break-after: always;
   }
 }
+
+/* PDF export styles */
+.print-mode {
+  background: white !important;
+  color: black !important;
+  width: 1200px !important;
+  margin: 0 !important;
+  padding: 20px !important;
+}
+
+.print-mode * {
+  background: transparent !important;
+  color: black !important;
+  box-shadow: none !important;
+  border-color: #e5e7eb !important;
+}
+
+.print-mode .bg-card {
+  background: white !important;
+}
+
+.print-mode .text-foreground,
+.print-mode .text-card-foreground {
+  color: black !important;
+}
+
+.print-mode .text-muted-foreground {
+  color: #6b7280 !important;
+}
+
+.print-mode .border {
+  border-color: #e5e7eb !important;
+}
+
+.print-mode .recharts-text {
+  fill: black !important;
+}
+
+.print-mode .recharts-cartesian-axis-tick-value {
+  fill: black !important;
+}
+
+.print-mode .recharts-legend-item-text {
+  color: black !important;
+}
+
+.print-mode .recharts-surface {
+  background: white !important;
+}
