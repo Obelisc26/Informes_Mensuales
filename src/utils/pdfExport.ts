@@ -51,7 +51,7 @@ export const exportToPDF = async (
     // PDF dimensions with margins (A4: 210x297mm)
     const pdfWidth = 210;
     const pdfHeight = 297;
-    const margin = 15; // 15mm margins
+    const margin = 8; // 8mm margins for wider content
     const contentWidth = pdfWidth - (margin * 2);
     const contentHeight = pdfHeight - (margin * 2);
     
