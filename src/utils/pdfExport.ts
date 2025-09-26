@@ -13,8 +13,8 @@ export const exportToPDF = async (
 ): Promise<void> => {
   const {
     filename = `SOC-Report-${new Date().toISOString().split('T')[0]}.pdf`,
-    quality = 1,
-    scale = 1.5
+    quality = 0.95,
+    scale = 2
   } = options;
 
   try {
@@ -55,23 +55,13 @@ export const exportToPDF = async (
     const contentWidth = pdfWidth - (margin * 2);
     const contentHeight = pdfHeight - (margin * 2);
     
-    // Calculate image dimensions to fit content area
-    const imgRatio = canvas.width / canvas.height;
-    const contentRatio = contentWidth / contentHeight;
-    
-    let imgWidth, imgHeight;
-    if (imgRatio > contentRatio) {
-      // Image is wider, fit to width
-      imgWidth = contentWidth;
-      imgHeight = contentWidth / imgRatio;
-    } else {
-      // Image is taller, fit to height
-      imgHeight = contentHeight;
-      imgWidth = contentHeight * imgRatio;
-    }
+    // Calculate image width to fit page width (maintain readability)
+    const imgWidth = contentWidth;
+    // Calculate proportional height based on original aspect ratio
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Center the image on the page
-    const xOffset = margin + (contentWidth - imgWidth) / 2;
+    // Position on page
+    const xOffset = margin;
     const yOffset = margin;
 
     // Create PDF
