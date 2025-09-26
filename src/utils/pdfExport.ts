@@ -51,29 +51,17 @@ export const exportToPDF = async (
     // PDF dimensions with margins (A4: 210x297mm)
     const pdfWidth = 210;
     const pdfHeight = 297;
-    const margin = 10; // 10mm margins for better spacing
+    const margin = 8; // 8mm margins for good spacing
     const contentWidth = pdfWidth - (margin * 2);
     const contentHeight = pdfHeight - (margin * 2);
     
-    // Calculate image dimensions to maintain aspect ratio without stretching
-    const originalRatio = canvas.width / canvas.height;
-    const maxWidth = contentWidth * 0.85; // Use 85% of available width for better proportions
-    
-    let imgWidth, imgHeight;
-    
-    // Calculate based on original content proportions
-    if (canvas.height > canvas.width) {
-      // Tall content - fit to content height if needed
-      imgHeight = Math.min(contentHeight, (canvas.height * maxWidth) / canvas.width);
-      imgWidth = imgHeight * originalRatio;
-    } else {
-      // Wide content - use max width but don't stretch
-      imgWidth = maxWidth;
-      imgHeight = imgWidth / originalRatio;
-    }
-    
-    // Center horizontally
-    const xOffset = margin + (contentWidth - imgWidth) / 2;
+    // Use full content width to maintain readability
+    const imgWidth = contentWidth;
+    // Calculate height proportionally - this will extend across multiple pages
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    // Position on page
+    const xOffset = margin;
     const yOffset = margin;
 
     // Create PDF
