@@ -112,18 +112,25 @@ export function SOCDashboard({
             <h2 className="text-2xl font-bold mb-4 text-foreground">
               📈 Análisis de Incidentes
             </h2>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-              <SeverityChart data={reportData.severityData} />
-              <StatusChart data={reportData.statusData} />
+            {/* Small charts side by side - optimized for both portrait and landscape */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6 print:grid-cols-4">
+              <div className="col-span-1 md:col-span-1 xl:col-span-1 print:col-span-1">
+                <SeverityChart data={reportData.severityData} />
+              </div>
+              <div className="col-span-1 md:col-span-1 xl:col-span-1 print:col-span-1">
+                <StatusChart data={reportData.statusData} />
+              </div>
+              <div className="col-span-1 md:col-span-1 xl:col-span-1 print:col-span-1">
+                <TopCVEChart data={reportData.topCVEs} />
+              </div>
+              <div className="col-span-1 md:col-span-1 xl:col-span-1 print:col-span-1">
+                <TopAssetsChart data={reportData.topAssets} />
+              </div>
             </div>
             
+            {/* Large chart - full width */}
             <div className="mb-6">
               <DailyIncidentsChart data={reportData.dailyIncidents} />
-            </div>
-            
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <TopCVEChart data={reportData.topCVEs} />
-              <TopAssetsChart data={reportData.topAssets} />
             </div>
           </section>
 

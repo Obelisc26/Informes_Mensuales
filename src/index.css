@@ -139,6 +139,17 @@ All colors MUST be HSL.
 
 /* Print styles for reports */
 @media print {
+  /* Default page setup */
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+  
+  /* Landscape orientation support */
+  @page :first {
+    margin-top: 8mm;
+  }
+  
   .print\\:hidden {
     display: none !important;
   }
@@ -149,6 +160,16 @@ All colors MUST be HSL.
   
   .print\\:max-w-none {
     max-width: none !important;
+  }
+  
+  /* Responsive grid for landscape printing */
+  .print\\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
+  }
+  
+  .print\\:col-span-1 {
+    grid-column: span 1 / span 1 !important;
   }
   
   body {
@@ -169,6 +190,19 @@ All colors MUST be HSL.
   .break-after-page {
     break-after: page;
     page-break-after: always;
+  }
+  
+  /* Optimize chart sizes for printing */
+  .recharts-wrapper {
+    max-height: 250px !important;
+    min-height: 200px !important;
+  }
+  
+  /* Chart containers for responsive printing */
+  .chart-container {
+    aspect-ratio: 1 / 1;
+    max-width: 100%;
+    height: auto !important;
   }
 }
 
