@@ -30,7 +30,7 @@ export const exportToPDF = async (
     // Wait for potential layout changes
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Create canvas from element with better settings
+    // Create canvas from element with better settings for full content capture
     const canvas = await html2canvas(element, {
       scale,
       useCORS: true,
@@ -41,8 +41,11 @@ export const exportToPDF = async (
       width: element.scrollWidth,
       scrollX: 0,
       scrollY: 0,
-      windowWidth: 1200,
-      windowHeight: element.scrollHeight
+      windowWidth: 1400,
+      windowHeight: element.scrollHeight,
+      ignoreElements: (element) => {
+        return element.classList?.contains('print:hidden') || false;
+      }
     });
 
     // Restore original classes
@@ -67,48 +70,60 @@ export const exportToPDF = async (
     // Create PDF
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    // Calculate how many pages we need
+    // Calculate how many pages we need based on actual content height
     const pageContentHeight = contentHeight;
     const totalImageHeight = imgHeight;
     const pagesNeeded = Math.ceil(totalImageHeight / pageContentHeight);
+    
+    console.log(`PDF Info: Total height: ${totalImageHeight}mm, Pages needed: ${pagesNeeded}`);
     
     for (let page = 0; page < pagesNeeded; page++) {
       if (page > 0) {
         pdf.addPage();
       }
       
-      // Calculate source rectangle for this page
-      const srcY = (page * pageContentHeight * canvas.height) / totalImageHeight;
-      const srcHeight = Math.min(
-        (pageContentHeight * canvas.height) / totalImageHeight,
-        canvas.height - srcY
+      // Calculate source rectangle for this page - more precise calculation
+      const startY = (page * pageContentHeight * canvas.height) / totalImageHeight;
+      const endY = Math.min(
+        ((page + 1) * pageContentHeight * canvas.height) / totalImageHeight,
+        canvas.height
       );
+      const srcHeight = endY - startY;
       
-      // Create a temporary canvas for this page's content
-      const pageCanvas = document.createElement('canvas');
-      const pageCtx = pageCanvas.getContext('2d');
-      
-      if (pageCtx && srcHeight > 0) {
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = srcHeight;
+      // Only process if there's content to show
+      if (srcHeight > 0) {
+        // Create a temporary canvas for this page's content
+        const pageCanvas = document.createElement('canvas');
+        const pageCtx = pageCanvas.getContext('2d');
         
-        // Draw the portion of the original canvas for this page
-        pageCtx.drawImage(
-          canvas,
-          0, srcY, canvas.width, srcHeight,
-          0, 0, canvas.width, srcHeight
-        );
-        
-        // Add to PDF
-        const pageImgHeight = (srcHeight * imgWidth) / canvas.width;
-        pdf.addImage(
-          pageCanvas.toDataURL('image/jpeg', quality),
-          'JPEG',
-          xOffset,
-          yOffset,
-          imgWidth,
-          pageImgHeight
-        );
+        if (pageCtx) {
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = srcHeight;
+          
+          // Fill with white background
+          pageCtx.fillStyle = '#ffffff';
+          pageCtx.fillRect(0, 0, canvas.width, srcHeight);
+          
+          // Draw the portion of the original canvas for this page
+          pageCtx.drawImage(
+            canvas,
+            0, startY, canvas.width, srcHeight,
+            0, 0, canvas.width, srcHeight
+          );
+          
+          // Calculate the height for this page in the PDF
+          const pageImgHeight = (srcHeight * imgWidth) / canvas.width;
+          
+          // Add to PDF
+          pdf.addImage(
+            pageCanvas.toDataURL('image/jpeg', quality),
+            'JPEG',
+            xOffset,
+            yOffset,
+            imgWidth,
+            pageImgHeight
+          );
+        }
       }
     }
 

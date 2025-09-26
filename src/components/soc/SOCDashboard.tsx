@@ -79,7 +79,7 @@ export function SOCDashboard({
             <h2 className="text-2xl font-bold mb-4 text-foreground">
               📊 Resumen Ejecutivo
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-4 gap-3 print:grid-cols-4 print:gap-2">
               <KPICard
                 title="Incidentes Totales"
                 value={reportData.incidentsTotal}
