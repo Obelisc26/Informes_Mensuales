@@ -1,89 +1,50 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import React from "react";
+import {
+  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend,
+} from "recharts";
 
-interface DailyIncidentsData {
-  date: string;
-  Critical: number;
-  High: number;
-  Medium: number;
-  Low: number;
-  Informational: number;
-}
+type Row = {
+  date?: string; day?: string;
+  Critical?: number; High?: number; Medium?: number; Low?: number; Informational?: number;
+};
 
-interface DailyIncidentsChartProps {
-  data: DailyIncidentsData[];
-  title?: string;
-}
+const DailyIncidentsChart: React.FC<{ data: Row[] }> = ({ data = [] }) => {
+  try {
+    const norm = (data || []).map(d => ({
+      date: d.date ?? d.day ?? "",
+      Critical: d.Critical ?? 0,
+      High: d.High ?? 0,
+      Medium: d.Medium ?? 0,
+      Low: d.Low ?? 0,
+      Informational: d.Informational ?? 0,
+    }));
 
-export function DailyIncidentsChart({ data, title = "Evolución Diaria de Incidentes" }: DailyIncidentsChartProps) {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-  };
+    if (!norm.length) return <div className="muted-placeholder">Sin datos</div>;
 
-  return (
-    <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis 
-                dataKey="date" 
-                tickFormatter={formatDate}
-                fontSize={12}
-                angle={-45}
-                textAnchor="end"
-                height={70}
-              />
-              <YAxis fontSize={12} />
-              <Tooltip 
-                labelFormatter={(value) => `Fecha: ${formatDate(value)}`}
-                formatter={(value: number, name: string) => [value, name]}
-              />
-              <Legend />
-              <Bar 
-                dataKey="Critical" 
-                stackId="a" 
-                fill="hsl(var(--critical))" 
-                name="Critical"
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar 
-                dataKey="High" 
-                stackId="a" 
-                fill="hsl(var(--high))" 
-                name="High"
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar 
-                dataKey="Medium" 
-                stackId="a" 
-                fill="hsl(var(--medium))" 
-                name="Medium"
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar 
-                dataKey="Low" 
-                stackId="a" 
-                fill="hsl(var(--low))" 
-                name="Low"
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar 
-                dataKey="Informational" 
-                stackId="a" 
-                fill="hsl(var(--info))" 
-                name="Informational"
-                radius={[2, 2, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={norm} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+
+          {/* ✅ Colores definidos (sin negros) */}
+          <Bar dataKey="Low" stackId="a" fill="#22c55e" />          {/* verde */}
+          <Bar dataKey="Medium" stackId="a" fill="#eab308" />       {/* amarillo */}
+          <Bar dataKey="High" stackId="a" fill="#f59e0b" />         {/* ámbar */}
+          <Bar dataKey="Critical" stackId="a" fill="#ef4444" />     {/* rojo */}
+          <Bar dataKey="Informational" stackId="a" fill="#94a3b8" />{/* gris */}
+
+          <Line type="monotone" dataKey="High" dot={false} stroke="#2563eb" />
+        </ComposedChart>
+      </ResponsiveContainer>
+    );
+  } catch {
+    return <div className="muted-placeholder">Gráfico no disponible</div>;
+  }
+};
+
+export { DailyIncidentsChart };
+export default DailyIncidentsChart;

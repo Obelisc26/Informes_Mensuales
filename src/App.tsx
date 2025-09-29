@@ -1,27 +1,23 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import React, { Suspense } from "react";
+import IndexPage from "@/pages/Index";
+import { ErrorBoundary } from "@/ErrorBoundary";
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+// Señal visual de que React sí montó:
+const MountPing = () => (
+  <div className="text-xs text-gray-500 px-2 py-1">
+    <span>✅ App montada</span>
+  </div>
 );
 
-export default App;
+export default function App() {
+  return (
+    <>
+      <MountPing />
+      <ErrorBoundary>
+        <Suspense fallback={<div className="p-4">Cargando…</div>}>
+          <IndexPage />
+        </Suspense>
+      </ErrorBoundary>
+    </>
+  );
+}

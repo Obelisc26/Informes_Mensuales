@@ -1,64 +1,69 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Recommendation } from "@/types/soc";
+import React from "react";
 
-interface RecommendationsSectionProps {
+export type Recommendation = {
+  icon?: string;
+  titulo: string;
+  detalle?: string;
+  // owner?: string;          // ⬅️ Eliminado de la UI
+  deadline?: string;
+};
+
+type Props = {
   recommendations: Recommendation[];
-  title?: string;
-}
+};
 
-export function RecommendationsSection({ 
-  recommendations, 
-  title = "Recomendaciones Prioritarias" 
-}: RecommendationsSectionProps) {
-  const getDeadlineBadgeVariant = (deadline: string) => {
-    if (deadline.includes("7 días")) return "destructive";
-    if (deadline.includes("14 días")) return "secondary";
-    return "default";
-  };
+/**
+ * Lista de recomendaciones PRIORITARIAS sin el campo "Responsable".
+ * Cambios mínimos: sólo se removió la fila que mostraba el owner.
+ */
+export const RecommendationsSection: React.FC<Props> = ({
+  recommendations = [],
+}) => {
+  if (!recommendations.length) {
+    return <div className="muted-placeholder">Sin recomendaciones</div>;
+  }
 
   return (
-    <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {recommendations.map((rec, index) => (
-            <div key={index} className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl" role="img" aria-label="icon">
-                  {rec.icon}
-                </span>
-                <div className="flex-1">
-                  <h4 className="font-semibold">{rec.titulo}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {rec.detalle}
-                  </p>
-                </div>
+    <div className="space-y-3">
+      {recommendations.map((rec, idx) => (
+        <div
+          key={`${rec.titulo}-${idx}`}
+          className="rounded-md border bg-card shadow-sm px-3 py-3"
+        >
+          {/* Cabecera: icono + título */}
+          <div className="flex items-start gap-2">
+            {rec.icon ? (
+              <span aria-hidden className="text-xl leading-none">
+                {rec.icon}
+              </span>
+            ) : (
+              <span aria-hidden className="w-5 h-5 rounded-sm bg-muted inline-block" />
+            )}
+            <div className="min-w-0">
+              <div className="font-semibold text-sm text-foreground">
+                {rec.titulo}
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Responsable:
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    {rec.owner}
-                  </Badge>
+              {rec.detalle ? (
+                <div className="text-xs text-muted-foreground">
+                  {rec.detalle}
                 </div>
-                
-                <Badge 
-                  variant={getDeadlineBadgeVariant(rec.deadline)}
-                  className="text-xs"
-                >
-                  📅 {rec.deadline}
-                </Badge>
-              </div>
+              ) : null}
             </div>
-          ))}
+          </div>
+
+          {/* Pie: solo deadline (se mantiene) */}
+          <div className="mt-2 flex items-center justify-between">
+            <div className="text-xs text-muted-foreground"></div>
+            {rec.deadline ? (
+              <span className="inline-flex items-center justify-center rounded-full bg-red-100 text-red-700 px-2 h-5 text-[11px] leading-none">
+                {rec.deadline}
+              </span>
+            ) : null}
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      ))}
+    </div>
   );
-}
+};
+
+export default RecommendationsSection;

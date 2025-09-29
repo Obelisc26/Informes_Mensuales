@@ -1,88 +1,91 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import React from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-interface StatusData {
-  name: string;
-  value: number;
-  color: string;
+type Row = { name: string; value: number; color?: string };
+type Props = { data: Row[] };
+
+/** Leyenda compacta fuera del gráfico (no roba altura) */
+function CompactLegend({ data }: { data: Row[] }) {
+  return (
+    <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] leading-tight">
+      {data.map((d, i) => (
+        <div key={i} className="inline-flex items-center gap-2">
+          <span
+            className="inline-block h-2 w-2 rounded-sm"
+            style={{ backgroundColor: d.color || "#82ca9d" }}
+          />
+          <span style={{ color: d.color || "#82ca9d" }}>
+            {d.name} ({d.value})
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-interface StatusChartProps {
-  data: StatusData[];
-  title?: string;
-}
+export default function StatusChart({ data }: Props) {
+  const total = (data ?? []).reduce((s, d) => s + (d?.value ?? 0), 0);
 
-export function StatusChart({ data, title = "Estado de Incidentes" }: StatusChartProps) {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-
-  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  const renderCustomLabel = ({
+    cx,
+    cy,
+    midAngle,
+    innerRadius,
+    outerRadius,
+    percent,
+  }: any) => {
     if (percent < 0.05) return null;
-    
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+    const RAD = Math.PI / 180;
+    const r = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + r * Math.cos(-midAngle * RAD);
+    const y = cy + r * Math.sin(-midAngle * RAD);
     return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
+      <text
+        x={x}
+        y={y}
+        fill="#fff"
+        textAnchor={x > cx ? "start" : "end"}
         dominantBaseline="central"
         fontSize={12}
-        fontWeight="bold"
+        fontWeight={700}
       >
-        {`${(percent * 100).toFixed(0)}%`}
+        {(percent * 100).toFixed(0)}%
       </text>
     );
   };
 
   return (
-    <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={renderCustomLabel}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip 
-                formatter={(value: number) => [value, "Incidentes"]}
-                labelFormatter={(label) => `Estado: ${label}`}
-              />
-              <Legend 
-                verticalAlign="bottom" 
-                height={36}
-                formatter={(value, entry) => (
-                  <span style={{ color: entry.color }}>
-                    {value} ({entry.payload?.value})
-                  </span>
-                )}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="mt-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            Total: <span className="font-semibold">{total}</span> incidentes
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="w-full h-full">
+      <div className="h-[220px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="52%"
+              outerRadius={84}  // ✅ más grande
+              labelLine={false}
+              label={renderCustomLabel}
+              dataKey="value"
+            >
+              {data.map((entry, i) => (
+                <Cell key={i} fill={entry.color || "#82ca9d"} />
+              ))}
+            </Pie>
+
+            <Tooltip
+              formatter={(v: number) => [v, "Incidentes"]}
+              labelFormatter={(label: string) => `Estado: ${label}`}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      <CompactLegend data={data} />
+
+      <div className="mt-1 text-center text-xs text-muted-foreground">
+        Total: <span className="font-semibold">{total}</span> incidentes
+      </div>
+    </div>
   );
 }

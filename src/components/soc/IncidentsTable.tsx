@@ -1,90 +1,78 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SocIncident } from "@/types/soc";
+import React from "react";
 
-interface IncidentsTableProps {
+/** Tipado mínimo esperado por la tabla (coincide con lo que generas) */
+export type SocIncident = {
+  id: string;
+  created_at: Date | string;
+  severity: "Critical" | "High" | "Medium" | "Low" | "Informational" | string;
+  asset: string;
+  incident_type: string;
+  status: "Abierta" | "En revisión" | "Mitigada" | string;
+  // cve?: string; // 🔕 columna removida
+};
+
+type Props = {
   incidents: SocIncident[];
-  title?: string;
-}
+};
 
-const severityVariants = {
-  Critical: "destructive",
-  High: "secondary", 
-  Medium: "outline",
-  Low: "default",
-  Informational: "secondary"
-} as const;
+const formatDate = (dt: Date | string) => {
+  const d = typeof dt === "string" ? new Date(dt) : dt;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy}, ${hh}:${mi}`;
+};
 
-const statusVariants = {
-  "Abierta": "destructive",
-  "En revisión": "secondary",
-  "Mitigada": "default"
-} as const;
-
-export function IncidentsTable({ incidents, title = "Muestra de Incidentes Recientes" }: IncidentsTableProps) {
-  const formatDate = (date: Date) => {
-    return date.toLocaleString('es-ES', {
-      day: '2-digit',
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+export const IncidentsTable: React.FC<Props> = ({ incidents = [] }) => {
+  if (!incidents.length) {
+    return <div className="muted-placeholder">Sin datos</div>;
+  }
 
   return (
-    <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[100px]">ID</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Severidad</TableHead>
-                <TableHead>Activo</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>CVE</TableHead>
-                <TableHead>Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {incidents.slice(0, 10).map((incident) => (
-                <TableRow key={incident.id}>
-                  <TableCell className="font-mono text-sm">{incident.id}</TableCell>
-                  <TableCell className="text-sm">{formatDate(incident.created_at)}</TableCell>
-                  <TableCell>
-                    <Badge variant={severityVariants[incident.severity]}>
-                      {incident.severity}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">{incident.asset}</TableCell>
-                  <TableCell className="text-sm">{incident.incident_type}</TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {incident.cve || "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariants[incident.status]}>
-                      {incident.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        {incidents.length > 10 && (
-          <div className="mt-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              Mostrando 10 de {incidents.length} incidentes
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="w-full overflow-hidden">
+      <div className="text-xs text-muted-foreground mb-2 font-medium">
+        Muestra de Incidentes Recientes
+      </div>
+
+      <div className="w-full overflow-hidden rounded-md border">
+        <table className="w-full text-sm">
+          <thead className="bg-secondary/60">
+            <tr className="text-left">
+              <th className="p-2">ID</th>
+              <th className="p-2">Fecha</th>
+              <th className="p-2">Severidad</th>
+              <th className="p-2">Activo</th>
+              <th className="p-2">Tipo</th>
+              <th className="p-2">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {incidents.slice(0, 10).map((inc) => (
+              <tr key={inc.id} className="border-t">
+                <td className="p-2 align-middle">{inc.id}</td>
+                <td className="p-2 align-middle">{formatDate(inc.created_at)}</td>
+                {/* ⬇️ Texto plano, sin “chips” */}
+                <td className="p-2 align-middle">
+                  <span className="font-medium">{inc.severity}</span>
+                </td>
+                <td className="p-2 align-middle">{inc.asset}</td>
+                <td className="p-2 align-middle">{inc.incident_type}</td>
+                <td className="p-2 align-middle">
+                  <span className="font-medium">{inc.status}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="text-center mt-2 text-xs text-muted-foreground">
+        Mostrando 10 de {incidents.length} incidentes
+      </div>
+    </div>
   );
-}
+};
+
+export default IncidentsTable;

@@ -206,51 +206,211 @@ All colors MUST be HSL.
   }
 }
 
-/* PDF export styles */
+/* ======================= PDF export styles (compact) ======================= */
 .print-mode {
-  background: white !important;
-  color: black !important;
-  width: 1200px !important;
+  /* Tamaño real A4, sin estrechar a 1200px */
+  background: #fff !important;
+  color: #000 !important;
+  width: 210mm !important;
+  max-width: 210mm !important;
   margin: 0 !important;
-  padding: 20px !important;
+  padding: 0 !important;
+
+  /* Densidad general solo en PDF */
+  font-size: 0.85rem !important;
+  line-height: 1.2 !important;
 }
 
-.print-mode * {
-  background: transparent !important;
-  color: black !important;
-  box-shadow: none !important;
-  border-color: #e5e7eb !important;
+.print-mode *,
+.print-mode .recharts-text { box-shadow: none !important; text-shadow: none !important; }
+.print-mode .recharts-text,
+.print-mode .recharts-cartesian-axis-tick-value,
+.print-mode .recharts-legend-item-text { color: #000 !important; fill: #000 !important; }
+.print-mode .border { border-color: #e5e7eb !important; }
+.print-mode .bg-card { background: #fff !important; }
+
+/* Cada página del informe (A4) */
+.a4 {
+  width: 210mm;                 /* ancho A4 */
+  min-height: 297mm;            /* alto A4 */
+  background: #fff;
+  margin: 0 auto;
+  box-sizing: border-box;       /* padding incluido → no se corta */
+  padding: 12mm;                /* margen interno homogéneo */
 }
 
-.print-mode .bg-card {
-  background: white !important;
+/* Nada más ancho que la página */
+.a4 * { max-width: 100%; }
+
+/* Tablas seguras (no empujan el ancho por texto largo) */
+.a4 table { width: 100% !important; table-layout: fixed; border-collapse: collapse; }
+.a4 th, .a4 td { word-break: break-word; white-space: normal; }
+
+/* Sombras y grid en PDF */
+.pdf-page { box-shadow: none; }
+.avoid-break { break-inside: avoid; }
+.print-mode .grid { gap: 10px !important; }
+
+/* Cards más compactas en PDF */
+.print-mode .card,
+.print-mode .bg-card { padding: 0 !important; }
+.print-mode .card [class*="CardHeader"] { padding: 8px 10px !important; }
+.print-mode .card [class*="CardContent"],
+.print-mode .card > .p-6 { padding: 10px !important; }
+
+/* ===== Chips / badges / “bolitas” (centrados y más pequeños solo en PDF) ===== */
+.print-mode .badge,
+.print-mode .chip,
+.print-mode .status,
+.print-mode .rounded-full,
+.print-mode [class*="badge"],
+.print-mode [class*="Badge"],
+.print-mode [class*="chip"],
+.print-mode [class*="Chip"],
+.print-mode [class*="status"],
+.print-mode [class*="Status"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 9.5px !important;      /* ↓ texto más pequeño */
+  line-height: 1 !important;        /* evita “bajar” el baseline */
+  white-space: nowrap !important;    /* no saltar de línea */
+  padding: 2px 6px !important;
+  vertical-align: middle !important; /* alinear con texto vecino */
 }
 
-.print-mode .text-foreground,
-.print-mode .text-card-foreground {
-  color: black !important;
+/* Círculos/ pastillas redondas (estado, días, severidad) */
+.print-mode .rounded-full,
+.print-mode [class*="rounded-full"] {
+  height: 18px !important;
+  min-width: 18px !important;
+  border-radius: 9999px !important;
+  padding: 0 6px !important;         /* si es pastilla, centra igualmente */
 }
 
-.print-mode .text-muted-foreground {
-  color: #6b7280 !important;
+/* Iconos dentro de chips (si los hay) */
+.print-mode .badge svg,
+.print-mode [class*="badge"] svg,
+.print-mode .chip svg,
+.print-mode [class*="chip"] svg {
+  width: 12px !important;
+  height: 12px !important;
+  margin-right: 4px !important;
 }
 
-.print-mode .border {
-  border-color: #e5e7eb !important;
+/* Vista pantalla: un pelín más compacta pero sin tocar títulos */
+@media screen {
+  .report-screen { font-size: 0.92rem; }
+  .report-screen .a4 { padding: 10mm; }
 }
 
-.print-mode .recharts-text {
-  fill: black !important;
+/* Placeholders */
+.muted-placeholder { font-size: 12px; color: rgba(0,0,0,.55); text-align: center; padding: 12px; }
+
+/* ===== Forzar centrado y tamaño de chips/pastillas dentro de tablas SOLO en PDF ===== */
+/* Captura elementos tipo badge que suelen ser spans/div con padding y border-radius */
+.print-mode td span[class*="rounded"][class*="px-"],
+.print-mode td div[class*="rounded"][class*="px-"],
+.print-mode td span[class*="rounded"][class*="py-"],
+.print-mode td div[class*="rounded"][class*="py-"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  /* que el texto no se parta ni se desplace verticalmente */
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+
+  /* tamaño mínimo cómodo y padding */
+  min-height: 20px !important;
+  padding: 2px 8px !important;
+  border-radius: 9999px !important; /* pastilla/círculo */
+
+  /* texto un poco más pequeño para “Informational” */
+  font-size: 10px !important;
+  font-weight: 600; /* opcional: consistente con Tailwind badge */
 }
 
-.print-mode .recharts-cartesian-axis-tick-value {
-  fill: black !important;
+/* Si el chip lleva un span interno, igualar line-height para evitar “texto abajo” */
+.print-mode td span[class*="rounded"][class*="px-"] *,
+.print-mode td div[class*="rounded"][class*="px-"] *,
+.print-mode td span[class*="rounded"][class*="py-"] *,
+.print-mode td div[class*="rounded"][class*="py-"] * {
+  line-height: 1 !important;
 }
 
-.print-mode .recharts-legend-item-text {
-  color: black !important;
+.print-mode {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.print-mode .recharts-surface {
-  background: white !important;
+/* ===== Página 1: compacta y estable ===== */
+.page1-compact .report-hero > div {
+  /* reduce padding del banner sin tocar otros headers */
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
 }
+
+/* KPIs más pequeños y consistentes */
+.page1-compact .kpi-content {
+  padding: 10px 12px !important;
+}
+.page1-compact .kpi-title {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+.page1-compact .kpi-value {
+  margin-top: 2px;
+  font-size: 22px;    /* 2xl aprox */
+  font-weight: 600;
+}
+
+/* Tarjetas de charts: alturas mínimas fijas para que NO se “estiren” */
+.page1-compact .chart-card .chart-content {
+  padding-top: 8px !important;
+  min-height: 220px;            /* altura estable para pie/donut/barras */
+}
+.page1-compact .chart-card-lg .chart-content-lg {
+  padding-top: 8px !important;
+  min-height: 260px;            /* evolución diaria un poco más alta */
+}
+
+/* Evita que Card/Content agreguen padding extra por otras clases */
+.page1-compact .chart-card .p-6,
+.page1-compact .chart-card .p-4,
+.page1-compact .chart-card-lg .p-6,
+.page1-compact .chart-card-lg .p-4 {
+  padding: 0 !important;
+}
+
+/* Pequeño ajuste visual a los títulos dentro de cards */
+.page1-compact .chart-card .text-sm,
+.page1-compact .chart-card-lg .text-sm {
+  font-size: 13px !important;
+}
+
+/* ===== Página 1: KPIs más pequeños ===== */
+.page1-compact .kpi-row {             /* menos separación entre tarjetas */
+  gap: 8px !important;
+}
+
+.page1-compact .kpi-card {            /* altura contenida */
+  min-height: 72px !important;        /* ~mucho más pequeño que antes */
+}
+
+.page1-compact .kpi-content {         /* menos padding interno */
+  padding: 6px 8px !important;
+}
+
+.page1-compact .kpi-title {           /* título pequeño */
+  font-size: 11px !important;
+}
+
+.page1-compact .kpi-value {           /* número compacto */
+  margin-top: 0 !important;
+  font-size: 20px !important;         /* antes ~22–24px */
+  line-height: 1.1 !important;
+}
+
+

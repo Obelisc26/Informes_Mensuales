@@ -1,49 +1,60 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Legend } from "recharts";
+import React from "react";
+import {
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  Tooltip,
+} from "recharts";
 
-interface MitreData {
-  name: string;
-  value: number;
+type Row = { name: string; value: number } & Record<string, any>;
+type Props = { data: Row[] };
+
+/** Normalización defensiva: asegura name/value numéricos y corta a 10 elementos */
+function normalize(rows: Row[] = []) {
+  return (rows || [])
+    .map((r) => ({
+      name:
+        r.name ??
+        r.label ??
+        r.tactic ??
+        r.tactics ??
+        r.id ??
+        "—",
+      value: Number(r.value ?? r.count ?? 0),
+    }))
+    .filter((r) => !!r.name && !Number.isNaN(r.value))
+    .slice(0, 10);
 }
 
-interface MitreRadarChartProps {
-  data: MitreData[];
-  title?: string;
-}
+const MitreRadarChart: React.FC<Props> = ({ data = [] }) => {
+  const norm = normalize(data);
 
-export function MitreRadarChart({ data, title = "Tácticas MITRE ATT&CK" }: MitreRadarChartProps) {
+  if (!norm.length) {
+    return <div className="muted-placeholder">Sin datos</div>;
+  }
+
   return (
-    <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
-              <PolarGrid />
-              <PolarAngleAxis 
-                dataKey="name" 
-                fontSize={10}
-                className="text-xs"
-              />
-              <PolarRadiusAxis 
-                angle={90} 
-                domain={[0, Math.max(...data.map(d => d.value)) + 1]}
-                fontSize={10}
-              />
-              <Radar
-                name="Incidentes"
-                dataKey="value"
-                stroke="hsl(var(--primary))"
-                fill="hsl(var(--primary))"
-                fillOpacity={0.3}
-                strokeWidth={2}
-              />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="w-full h-[260px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <RadarChart data={norm} margin={{ top: 12, right: 12, bottom: 12, left: 12 }}>
+          <PolarGrid />
+          <PolarAngleAxis dataKey="name" tick={{ fontSize: 11 }} />
+          <PolarRadiusAxis tick={{ fontSize: 10 }} />
+          <Tooltip />
+          <Radar
+            name="Tácticas"
+            dataKey="value"
+            stroke="hsl(var(--primary))"
+            fill="hsl(var(--accent))"
+            fillOpacity={0.45}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
   );
-}
+};
+
+export default MitreRadarChart;
