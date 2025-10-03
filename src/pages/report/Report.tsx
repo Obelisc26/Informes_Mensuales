@@ -1,129 +1,206 @@
-import React, { useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Page1Overview from "./Page1Overview";
 import Page2Analysis from "@/pages/report/Page2Analysis";
 import Page3Records from "./Page3Records";
 import { exportReportByPages } from "@/utils/pdfExportByPages";
 
-// Fuente de datos actual (la tuya)
+// ✅ tus datos locales (los de siempre)
 import { generateReportData } from "@/data/socData";
 
-/* -------------------- Helpers de normalización -------------------- */
-
-/** Normaliza [{name,value}] a varios nombres comunes que algunos charts podrían esperar */
-function withCommonKeysNameValue<T extends { [k: string]: any }>(
+// helpers para adaptar las claves a name/value
+function withCommonKeys<T extends Record<string, any>>(
   arr: T[],
   nameKey = "name",
   valueKey = "value"
 ) {
   return (arr ?? []).map((d) => ({
     ...d,
-    // claves base
     name: d[nameKey] ?? d.name ?? d.label ?? d.cve ?? d.asset ?? d.tactic,
     value: d[valueKey] ?? d.value ?? d.count,
-    // alias frecuentes (por si el chart los usa):
     label: d[nameKey] ?? d.name ?? d.label ?? d.cve ?? d.asset ?? d.tactic,
     count: d[valueKey] ?? d.value ?? d.count,
-    cve: d.cve ?? d[nameKey] ?? d.name,
-    asset: d.asset ?? d[nameKey] ?? d.name,
-    tactic: d.tactic ?? d[nameKey] ?? d.name,
   }));
 }
 
-/** Normaliza la serie diaria: acepta {date,...} y añade 'day' como alias */
-function normalizeDaily(daily: any[]) {
-  return (daily ?? []).map((d) => ({
-    ...d,
-    day: d.day ?? d.date, // algunos componentes usan 'day'
-    date: d.date ?? d.day,
-  }));
-}
+const fmtES = (iso: string) =>
+  new Date(iso + "T00:00:00").toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 
-/* ------------------------------------------------------------------ */
+type Top10Resp = {
+  ok?: boolean;
+  meta?: { site: string; start: string; end: string };
+  charts?: {
+    topCVE: { name: string; value: number }[];
+    topAssets: { name: string; value: number }[];
+  };
+};
+
+type TopItem = { name: string; value: number };
+type ApiTop10 = {
+  meta: { site: string; start: string; end: string };
+  charts: { topCVE: TopItem[]; topAssets: TopItem[] };
+};
+
+const fetchTop10 = async (site: string) => {
+  const res = await fetch(`/api/top10?site=${encodeURIComponent(site)}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = (await res.json()) as ApiTop10;
+
+  // Fuente única: lo que viene del server ya está {name, value}
+  setTopCVE(data.charts.topCVE);
+  setTopAssets(data.charts.topAssets);
+  setHeader({
+    cliente: data.meta.site,
+    periodo: `${fmt(data.meta.start)} – ${fmt(data.meta.end)}`,
+  });
+};
 
 export default function Report() {
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Objeto PLANO que devuelve tu socData.ts
-  const raw = generateReportData();
+  // 1) Datos locales base (Pág.1 y resto)
+  const raw = useMemo(() => generateReportData(), []);
+  const base = useMemo(() => {
+    return {
+      meta: {
+        cliente: "Cliente",
+        periodo: "—",
+        autores: ["SOC"],
+      },
+      kpis: {
+        incidentes: raw.incidentsTotal ?? 0,
+        activos: raw.activosAffectados ?? 0,
+        mtta: raw.mtta ?? "-",
+        mttr: raw.mttr ?? "-",
+      },
+      charts: {
+        severity: withCommonKeys(raw.severityData),
+        status: withCommonKeys(raw.statusData),
+        daily: (raw.dailyIncidents ?? []).map((d: any) => ({
+          ...d,
+          day: d.day ?? d.date,
+          date: d.date ?? d.day,
+        })),
+        // por si necesitas fallback local
+        topCVE: withCommonKeys(raw.topCVEs ?? []),
+        topAssets: withCommonKeys(raw.topAssets ?? []),
+        mitre: withCommonKeys(raw.mitreData ?? []),
+      },
+      analisis: {
+        ttpNotes: [],
+        cveDetails: raw.cveDetails ?? [],
+      },
+      incidents: raw.sampleIncidents ?? [],
+      content: {
+        events: raw.highlightedEvents ?? [],
+        recommendations: raw.recommendations ?? [],
+        glossary: raw.glossary ?? [],
+      },
+    };
+  }, [raw]);
 
-  // Adaptación a la estructura que consumen nuestras páginas
-  const data = {
-    meta: {
-      cliente: "Cliente",
-      periodo: "Trimestre en curso",
-      autores: ["SOC"],
-    },
-    kpis: {
-      incidentes: raw.incidentsTotal ?? 0,
-      activos: raw.activosAffectados ?? 0, // (doble 'f' como en tu código)
-      mtta: raw.mtta ?? "-",
-      mttr: raw.mttr ?? "-",
-    },
-    charts: {
-      severity: withCommonKeysNameValue(raw.severityData),   // name/value/label/count
-      status: withCommonKeysNameValue(raw.statusData),       // name/value/label/count
-      daily: normalizeDaily(raw.dailyIncidents),             // date + day
-      topCVE: withCommonKeysNameValue(raw.topCVEs),          // cve/name + count/value
-      topAssets: withCommonKeysNameValue(raw.topAssets),     // asset/name + count/value
-      mitre: withCommonKeysNameValue(raw.mitreData),         // tactic/name + value/count
-    },
-    analisis: {
-      ttpNotes: [],                           // añade textos si quieres
-      cveDetails: raw.cveDetails ?? [],
-    },
-    incidents: raw.sampleIncidents ?? [],
-    content: {
-      events: raw.highlightedEvents ?? [],
-      recommendations: raw.recommendations ?? [],
-      glossary: raw.glossary ?? [],
-    },
-  };
+  // 2) Cliente/período desde la API + topCVE/topAssets reales (Pág.2)
+  const [cliente, setCliente] = useState<string>(base.meta.cliente);
+  const [periodo, setPeriodo] = useState<string>(base.meta.periodo);
+
+  const [topCVE, setTopCVE] = useState<{ name: string; value: number }[]>(
+    base.charts.topCVE
+  );
+  const [topAssets, setTopAssets] = useState<{ name: string; value: number }[]>(
+    base.charts.topAssets
+  );
+
+  const site = useMemo(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("site") ?? "PEC";
+  }, []);
+
+  useEffect(() => {
+    fetch(`/api/top10?site=${encodeURIComponent(site)}`)
+      .then((r) => r.json())
+      .then((j: Top10Resp) => {
+        if (j?.meta?.site) {
+          setCliente(j.meta.site);
+          setPeriodo(`${fmtES(j.meta.start)} – ${fmtES(j.meta.end)}`);
+        } else {
+          // fallback: 3 meses hasta hoy
+          const today = new Date();
+          const start = new Date();
+          start.setMonth(start.getMonth() - 3);
+          setCliente(site);
+          setPeriodo(
+            `${fmtES(start.toISOString().slice(0, 10))} – ${fmtES(
+              today.toISOString().slice(0, 10)
+            )}`
+          );
+        }
+
+        if (j?.charts?.topCVE) setTopCVE(withCommonKeys(j.charts.topCVE));
+        if (j?.charts?.topAssets)
+          setTopAssets(withCommonKeys(j.charts.topAssets));
+      })
+      .catch(() => {
+        // si falla la API, quedamos con los locales
+        setCliente(site);
+        const today = new Date();
+        const start = new Date();
+        start.setMonth(start.getMonth() - 3);
+        setPeriodo(
+          `${fmtES(start.toISOString().slice(0, 10))} – ${fmtES(
+            today.toISOString().slice(0, 10)
+          )}`
+        );
+      });
+  }, [site]);
 
   const handleExport = async () => {
     if (!rootRef.current) return;
     await exportReportByPages(rootRef.current, {
-      filename: `informe-soc-${data.meta.periodo}.pdf`,
+      filename: `informe-soc-${cliente}-${periodo}.pdf`,
     });
   };
 
   return (
     <div ref={rootRef} className="space-y-4">
-      {/* Acciones */}
+      {/* Botón export */}
       <div className="flex justify-end gap-2 print:hidden">
         <Button onClick={handleExport}>Exportar PDF</Button>
       </div>
 
-      {/* Página 1 */}
+      {/* PÁGINA 1 — usa datos locales (hay datos) */}
       <Page1Overview
-        cliente={data.meta.cliente}
-        periodo={data.meta.periodo}
-        autores={data.meta.autores}
-        kpis={data.kpis}
+        cliente={cliente}
+        periodo={periodo}
+        autores={base.meta.autores}
+        kpis={base.kpis}
         charts={{
-          severity: data.charts.severity,
-          status: data.charts.status,
-          daily: data.charts.daily,
+          severity: base.charts.severity,
+          status: base.charts.status,
+          daily: base.charts.daily,
         }}
       />
 
-      {/* Página 2 */}
+      {/* PÁGINA 2 — topCVE/topAssets desde API (fallback a locales) */}
       <Page2Analysis
         charts={{
-          topCVE: data.charts.topCVE,
-          topAssets: data.charts.topAssets,
-          mitre: data.charts.mitre,
+          topCVE: topCVE?.length ? topCVE : base.charts.topCVE,
+          topAssets: topAssets?.length ? topAssets : base.charts.topAssets,
+          mitre: base.charts.mitre,
         }}
-        ttpNotes={data.analisis.ttpNotes}
-        cveDetails={data.analisis.cveDetails}
+        ttpNotes={base.analisis.ttpNotes}
+        cveDetails={base.analisis.cveDetails}
       />
 
-      {/* Página 3 */}
+      {/* PÁGINA 3 — igual que antes */}
       <Page3Records
-        incidents={data.incidents}
-        events={data.content.events}
-        recommendations={data.content.recommendations}
-        glossary={data.content.glossary}
+        incidents={base.incidents}
+        events={base.content.events}
+        recommendations={base.content.recommendations}
+        glossary={base.content.glossary}
       />
     </div>
   );
